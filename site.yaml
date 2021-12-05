@@ -1,0 +1,89 @@
+---
+
+- hosts: webservers
+  become: yes
+  vars:
+    pack_name:
+      - nginx
+      - php
+      - php-fpm
+    pack_state: 
+      - latest
+      - started
+      - restarted
+    src_file_path_1: ./default
+    src_file_path_2: ./index.php
+    dest_file_path_1: /etc/nginx/sites-available/default
+    dest_file_path_2: /var/www/html/index.php
+    installation_cache: yes
+  
+  tasks:
+
+    - name: install package nginx (latest version)
+
+      apt:
+         name: "{{pack_name[0]}}" 
+         state: "{{pack_state[0]}}" 
+         update_cache: "{{installation_cache}}"
+    
+    - name: start server(nginx))
+      service:
+        name: "{{pack_name[0]}}" 
+        state: "{{pack_state[1]}}"
+
+    
+    - name: install php packages
+
+      apt: 
+        name: ["{{pack_name[1]}}", "{{pack_name[2]}}"] 
+        state: "{{pack_state[0]}}"
+        update_cache: "{{installation_cache}}"
+ 
+    
+    - copy: 
+        src: "{{src_file_path_1}}"
+        dest: "{{dest_file_path_1}}"
+
+    - copy:
+        src: "{{src_file_path_2}}" 
+        dest: "{{dest_file_path_2}}"
+
+    - service: 
+        name: "{{pack_name[0]}}" 
+        state: "{{pack_state[2]}}"
+
+- hosts:  haproxy
+  become: yes
+  
+  vars:
+    serv_name: haproxy
+    serv_state:
+      - present
+      - restarted
+    serv_cache: yes
+    haproxy_mode: http
+    haproxy_algorithm:  roundrobin
+    haproxy_backend_servers: backend_servers
+    haproxy_path: /etc/haproxy
+    
+        
+  tasks:
+
+
+    - name: install HAProxy
+      apt: 
+        update_cache: "{{serv_cache}}" 
+        name: "{{serv_name}}"
+        state: "{{serv_state[0]}}"
+    
+    - name: Copy HAProxy Configuration File 
+      template: src=haproxy.cfg.j2 dest={{haproxy_path}}/haproxy.cfg
+        
+    - name: Start HAProxy
+      service: 
+        name: "{{serv_name}}" 
+        state: "{{serv_state[1]}}"
+
+    
+  
+
